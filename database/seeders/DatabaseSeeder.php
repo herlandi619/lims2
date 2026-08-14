@@ -23,28 +23,28 @@ class DatabaseSeeder extends Seeder
         // ]);
 
          $this->call([
-            // UserSeeder::class,
-            // KategoriAlatSeeder::class,
-            // SupplierSeeder::class,
-            // LokasiAlatSeeder::class,
-            // RuanganSeeder::class,
+            UserSeeder::class,
+            KategoriAlatSeeder::class,
+            SupplierSeeder::class,
+            LokasiAlatSeeder::class,
+            RuanganSeeder::class,
 
 
-            // AlatSeeder::class,
-            // JadwalLaboratoriumSeeder::class,
+            AlatSeeder::class,
+            JadwalLaboratoriumSeeder::class,
 
 
-            // PeminjamanSeeder::class,
-            // DetailPeminjamanSeeder::class,
-            // BookingRuanganSeeder::class,
+            PeminjamanSeeder::class,
+            DetailPeminjamanSeeder::class,
+            BookingRuanganSeeder::class,
 
-            // MaintenanceAlatSeeder::class,
-            // KalibrasiAlatSeeder::class,
-            // RiwayatAlatSeeder::class,
-            // ArsipSeeder::class,
-            // NotifikasiSeeder::class,
-            // ActivityLogSeeder::class,
-            // PengaturanDendaSeeder::class,
+            MaintenanceAlatSeeder::class,
+            KalibrasiAlatSeeder::class,
+            RiwayatAlatSeeder::class,
+            ArsipSeeder::class,
+            NotifikasiSeeder::class,
+            ActivityLogSeeder::class,
+            PengaturanDendaSeeder::class,
             SettingSeeder::class,
         ]);
     }
