@@ -6,53 +6,53 @@ use App\Http\Controllers\Controller;
 use App\Models\KelasPraktikum;
 use App\Models\DetailAbsensi;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
+use Inertia\Inertia; 
 
 class MahasiswaAbsensiController extends Controller
 {
     // Halaman Utama Monitoring Absensi Mahasiswa
     public function index(Request $request)
-    {
-        $mahasiswaId = auth()->id();
+{
+    $mahasiswaId = auth()->id();
 
-        // Ambil semua kelas praktikum yang diikuti oleh mahasiswa login
-        $kelas = KelasPraktikum::with(['dosen', 'ruangan'])
-            ->whereHas('pertemuan.detailAbsensi', function ($query) use ($mahasiswaId) {
-                $query->where('mahasiswa_id', $mahasiswaId);
-            })
-            ->orWhere('status_aktif', true) // Atau sesuaikan dengan tabel pivot krs/pendaftaran kelas jika ada
-            ->get()
-            ->map(function ($item) use ($mahasiswaId) {
-                // Hitung rekap statistik kehadiran pribadi
-                $absensiPribadi = DetailAbsensi::whereHas('pertemuan', function ($q) use ($item) {
-                    $q->where('kelas_praktikum_id', $item->id);
-                })->where('mahasiswa_id', $mahasiswaId)->get();
+    // Ambil HANYA kelas praktikum yang benar-benar diikuti oleh mahasiswa login
+    // Berdasarkan relasi ke tabel pertemuan -> detail_absensi milik mahasiswa tersebut
+    $kelas = KelasPraktikum::with(['dosen', 'ruangan'])
+        ->whereHas('pertemuan.detailAbsensi', function ($query) use ($mahasiswaId) {
+            $query->where('mahasiswa_id', $mahasiswaId);
+        })
+        ->get()
+        ->map(function ($item) use ($mahasiswaId) {
+            // Hitung rekap statistik kehadiran pribadi
+            $absensiPribadi = DetailAbsensi::whereHas('pertemuan', function ($q) use ($item) {
+                $q->where('kelas_praktikum_id', $item->id);
+            })->where('mahasiswa_id', $mahasiswaId)->get();
 
-                $totalHadir = $absensiPribadi->where('status_kehadiran', 'hadir')->count();
-                $totalIzin  = $absensiPribadi->where('status_kehadiran', 'izin')->count();
-                $totalSakit = $absensiPribadi->where('status_kehadiran', 'sakit')->count();
-                $totalAlpa  = $absensiPribadi->where('status_kehadiran', 'alpa')->count();
-                $totalPertemuan = $absensiPribadi->count();
+            $totalHadir = $absensiPribadi->where('status_kehadiran', 'hadir')->count();
+            $totalIzin  = $absensiPribadi->where('status_kehadiran', 'izin')->count();
+            $totalSakit = $absensiPribadi->where('status_kehadiran', 'sakit')->count();
+            $totalAlpa  = $absensiPribadi->where('status_kehadiran', 'alpa')->count();
+            $totalPertemuan = $absensiPribadi->count();
 
-                $persentase = $totalPertemuan > 0 
-                    ? round(($totalHadir / 14) * 100, 1) 
-                    : 0;
+            $persentase = $totalPertemuan > 0 
+                ? round(($totalHadir / 14) * 100, 1) 
+                : 0;
 
-                $item->rekap_pribadi = [
-                    'hadir' => $totalHadir,
-                    'izin'  => $totalIzin,
-                    'sakit' => $totalSakit,
-                    'alpa'  => $totalAlpa,
-                    'persentase' => $persentase,
-                ];
+            $item->rekap_pribadi = [
+                'hadir' => $totalHadir,
+                'izin'  => $totalIzin,
+                'sakit' => $totalSakit,
+                'alpa'  => $totalAlpa,
+                'persentase' => $persentase,
+            ];
 
-                return $item;
-            });
+            return $item;
+        });
 
-        return Inertia::render('Mahasiswa/Absensi/Index', [
-            'kelas' => $kelas
-        ]);
-    }
+    return Inertia::render('Mahasiswa/Absensi/Index', [
+        'kelas' => $kelas
+    ]);
+}
 
     // Detail 14 Pertemuan beserta Status Kehadiran Pribadi Mahasiswa
     public function showKelas($id)

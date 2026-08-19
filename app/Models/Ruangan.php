@@ -16,8 +16,13 @@ class Ruangan extends Model
         return $this->hasMany(BookingRuangan::class);
     }
 
-    public function jadwalLaboratorium()
-    {
-        return $this->hasMany(JadwalLaboratorium::class);
+    // public function jadwalLaboratorium()
+    // {
+    //     return $this->hasMany(JadwalLaboratorium::class);
+    // }
+
+    public function jadwalLaboratorium() {
+        return $this->hasMany(JadwalLaboratorium::class, 'ruangan_id');
     }
+    
 }

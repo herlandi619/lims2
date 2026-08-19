@@ -14,8 +14,10 @@ use App\Http\Controllers\Dosen\DosenDashboardController;
 use App\Http\Controllers\Dosen\DosenDokumenSopController;
 use App\Http\Controllers\Dosen\DosenInventarisController;
 use App\Http\Controllers\Dosen\DosenJadwalLaboratoriumController;
+use App\Http\Controllers\Dosen\DosenKrsMahasiswaController as DosenDosenKrsMahasiswaController;
 use App\Http\Controllers\Dosen\DosenPeminjamanController;
 use App\Http\Controllers\Dosen\DosenProfilController;
+use App\Http\Controllers\DosenKrsMahasiswaController;
 use App\Http\Controllers\Kepala\KepalaDashboardStatistikController;
 use App\Http\Controllers\Kepala\KepalaLaporanController;
 use App\Http\Controllers\Kepala\KepalaMonitoringController;
@@ -132,9 +134,8 @@ Route::middleware(['auth', 'verified'])->prefix('mahasiswa')->name('mahasiswa.')
     Route::get('/tickets', [MahasiswaTicketController::class, 'index'])->name('tickets.index');
     Route::post('/tickets', [MahasiswaTicketController::class, 'store'])->name('tickets.store');
     Route::post('/tickets/{id}/reply', [MahasiswaTicketController::class, 'reply'])->name('tickets.reply');
-    Route::put('/tickets/{id}/close', [MahasiswaTicketController::class, 'close'])->name('tickets.close');
-
-});
+    Route::put('/tickets/{id}/close', [MahasiswaTicketController::class, 'close'])->name('tickets.close');    
+    });
 
 Route::middleware(['auth', 'verified'])->prefix('dosen')->name('dosen.')->group(function () {
 
@@ -185,6 +186,10 @@ Route::middleware(['auth', 'verified'])->prefix('dosen')->name('dosen.')->group(
     Route::post('/absensi/pertemuan/{id}/simpan', [DosenAbsensiController::class, 'simpanAbsensi'])->name('absensi.pertemuan.simpan');
     Route::post('/absensi/pertemuan/{id} /generate-qr', [DosenAbsensiController::class, 'generateQr'])->name('absensi.pertemuan.qr');
 
+    // export pdf
+    Route::get('/absensi/kelas/{id}/export-pdf', [DosenAbsensiController::class, 'exportPdf'])
+    ->name('absensi.kelas.exportPdf');;
+
 
     // FITUR 7 PROFILE
     // Index Tampilan Profil
@@ -195,6 +200,11 @@ Route::middleware(['auth', 'verified'])->prefix('dosen')->name('dosen.')->group(
 
     // Aksi Update Password
     Route::post('/profil/password', [DosenProfilController::class, 'updatePassword'])->name('profil.password.update');
+
+    // DOSEN KRS MAHASISWA
+    Route::get('/krs-mahasiswa', [DosenDosenKrsMahasiswaController::class, 'index'])->name('krs.index');
+    Route::post('/krs-mahasiswa', [DosenDosenKrsMahasiswaController::class, 'store'])->name('krs.store');
+    Route::delete('/krs-mahasiswa/{id}', [DosenDosenKrsMahasiswaController::class, 'destroy'])->name('krs.destroy');
 
 });
 

@@ -37,7 +37,7 @@ export default function Index({ kelas, ruangan, filters }) {
                 setIsTambahModalOpen(false);
                 reset();
                 Swal.fire('Berhasil!', 'Kelas Praktikum & 14 Pertemuan berhasil dikonfigurasi.', 'success');
-            }
+            } 
         });
     };
 
@@ -201,7 +201,20 @@ export default function Index({ kelas, ruangan, filters }) {
                                     {selectedKelasMap.kode_kelas} - {selectedKelasMap.nama_kelas} (Semester {selectedKelasMap.semester})
                                 </p>
                             </div>
-                            <button onClick={() => setSelectedKelasMap(null)} className="text-slate-400 hover:text-slate-600">✕</button>
+                            {/* 🌟 TOMBOL EXPORT PDF */}
+                            <div className="flex items-center gap-2">
+                                <a
+                                    href={route('dosen.absensi.kelas.exportPdf', selectedKelasMap.id)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1 transition-colors"
+                                >
+                                    📄 Export PDF Rekap
+                                </a>
+                                <button onClick={() => setSelectedKelasMap(null)} className="text-slate-400 hover:text-slate-600 font-bold px-2">✕</button>
+                            </div>
+
+                            {/* <button onClick={() => setSelectedKelasMap(null)} className="text-slate-400 hover:text-slate-600">✕</button> */}
                         </div>
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -363,5 +376,5 @@ export default function Index({ kelas, ruangan, filters }) {
                 </div>
             )}
         </DosenLayout>
-    );
+    ); 
 }

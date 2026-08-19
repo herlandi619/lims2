@@ -12,7 +12,8 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
-
+use Barryvdh\DomPDF\Facade\Pdf;
+  
 class DosenAbsensiController extends Controller
 {
     public function index(Request $request)
@@ -81,15 +82,19 @@ class DosenAbsensiController extends Controller
         return redirect()->back()->with('success', 'Kelas Praktikum dan 14 Map Pertemuan Absensi berhasil dibuat.');
     }
 
-    // Menampilkan 14 Pertemuan dan Mahasiswa untuk Diabsen
     public function showPertemuan($id)
     {
-        $pertemuan = PertemuanAbsensi::with(['kelasPraktikum.dosen', 'detailAbsensi.mahasiswa'])->findOrFail($id);
+        // Load pertemuan beserta kelas praktikum dan mahasiswa yang terdaftar di kelas tersebut
+        $pertemuan = PertemuanAbsensi::with([
+            'kelasPraktikum.dosen', 
+            'kelasPraktikum.mahasiswa', // Pastikan relasi 'mahasiswa' ada di model KelasPraktikum
+            'detailAbsensi.mahasiswa'
+        ])->findOrFail($id);
 
-        // Ambil semua mahasiswa aktif (bisa disesuaikan dengan kriteria per kelas)
-        $mahasiswa = User::where('role', 'mahasiswa')
-            ->where('status', true)
-            ->get(['id', 'name', 'nim']);
+        // Ambil daftar mahasiswa HANYA dari kelas praktikum ini (melalui relasi kelas_mahasiswa)
+        $mahasiswa = $pertemuan->kelasPraktikum->mahasiswa; 
+        // Catatan: Jika relasi di model KelasPraktikum menggunakan nama lain (misal: students()), 
+        // sesuaikan menjadi: $pertemuan->kelasPraktikum->students;
 
         // Format data presensi
         $presensiMap = $pertemuan->detailAbsensi->keyBy('mahasiswa_id');
@@ -110,6 +115,8 @@ class DosenAbsensiController extends Controller
             'list_absensi' => $listAbsensi
         ]);
     }
+
+
 
     // Simpan/Batch Update Absensi 14 Pertemuan
     public function simpanAbsensi(Request $request, $id)
@@ -160,4 +167,34 @@ class DosenAbsensiController extends Controller
 
         return redirect()->back()->with('success', 'QR Code presensi berhasil dibuat.');
     }
+
+    public function exportPdf($id)
+    {
+        // Ambil data kelas praktikum beserta relasi mahasiswa, pertemuan, dan detail absensi
+        $kelas = KelasPraktikum::with([
+            'dosen',
+            'ruangan',
+            'mahasiswa',
+            'pertemuan.detailAbsensi'
+        ])->findOrFail($id);
+
+        // Pastikan dosen yang mendownload adalah dosen pengampu kelas tersebut (opsional, untuk keamanan)
+        if ($kelas->dosen_id !== auth()->id()) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        // Load view khusus untuk template PDF
+        $pdf = Pdf::loadView('exports.rekap-absensi-pdf', [
+            'kelas' => $kelas
+        ]);
+
+        // Atur orientasi kertas (landscape lebih baik karena kolom 14 pertemuan cukup panjang)
+        $pdf->setPaper('a4', 'landscape');
+
+        // Download file PDF dengan nama dinamis
+        $namaFile = 'Rekap-Absensi-' . Str::slug($kelas->nama_praktikum) . '-' . Str::slug($kelas->nama_kelas) . '.pdf';
+        
+        return $pdf->download($namaFile);
+    }
+ 
 }

@@ -101,7 +101,7 @@ export default function Index({ jadwalList, filters }) {
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3">
-                                                <div className="font-semibold text-gray-800">{item.nama_mata_kuliah}</div>
+                                                <div className="font-semibold text-gray-800">{item.mata_kuliah}</div>
                                                 <div className="text-xs text-gray-500">Kelas: {item.kelas || '-'}</div>
                                             </td>
                                             <td className="px-4 py-3 whitespace-nowrap">

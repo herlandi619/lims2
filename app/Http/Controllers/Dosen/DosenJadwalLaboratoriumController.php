@@ -9,7 +9,7 @@ use App\Models\Notifikasi;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
-
+ 
 class DosenJadwalLaboratoriumController extends Controller
 {
     public function index(Request $request)

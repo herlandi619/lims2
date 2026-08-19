@@ -19,6 +19,12 @@ class KelasPraktikum extends Model
         'status_aktif'
     ];
 
+    public function mahasiswa()
+    {
+        return $this->belongsToMany(User::class, 'kelas_mahasiswa', 'kelas_praktikum_id', 'mahasiswa_id')
+                    ->withTimestamps();
+    }
+
     public function dosen()
     {
         return $this->belongsTo(User::class, 'dosen_id');
@@ -33,4 +39,6 @@ class KelasPraktikum extends Model
     {
         return $this->hasMany(PertemuanAbsensi::class, 'kelas_praktikum_id')->orderBy('pertemuan_ke');
     }
+
+    
 }

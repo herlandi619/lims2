@@ -122,4 +122,14 @@ class User extends Authenticatable
         return $this->hasMany(Ticket::class, 'assigned_to');
     }
 
+    // Jika user adalah Dosen
+    public function jadwalMengajar() {
+        return $this->hasMany(JadwalLaboratorium::class, 'dosen_id');
+    }
+
+    // Jika user adalah Mahasiswa
+    public function jadwalKuliah() {
+        return $this->belongsToMany(JadwalLaboratorium::class, 'krs_mahasiswa', 'user_id', 'jadwal_laboratorium_id');
+    }
+
 }

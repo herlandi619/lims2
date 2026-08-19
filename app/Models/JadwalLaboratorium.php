@@ -28,4 +28,10 @@ class JadwalLaboratorium extends Model
     {
         return $this->hasMany(KelasMahasiswa::class, 'jadwal_id');
     }
+
+    public function peserta() {
+        return $this->belongsToMany(User::class, 'krs_mahasiswa', 'jadwal_laboratorium_id', 'user_id');
+    }
+
+
 }
