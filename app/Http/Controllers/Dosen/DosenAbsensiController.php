@@ -13,37 +13,54 @@ use Inertia\Inertia;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Auth;
   
 class DosenAbsensiController extends Controller
-{
+{ 
     public function index(Request $request)
-    {
-        $search = $request->input('search');
-        $semester = $request->input('semester');
+{
+    $search = $request->input('search');
+    $semester = $request->input('semester');
 
-        $kelas = KelasPraktikum::with(['dosen', 'ruangan', 'pertemuan']) // ✅ Wajib tambahkan 'pertemuan'
-            ->withCount('pertemuan')
-            ->when($search, function ($query, $search) {
-                $query->where('nama_praktikum', 'like', "%{$search}%")
-                    ->orWhere('kode_kelas', 'like', "%{$search}%")
-                    ->orWhere('nama_kelas', 'like', "%{$search}%");
-            })
-            ->when($semester, function ($query, $semester) {
-                $query->where('semester', $semester);
-            })
-            ->latest()
-            ->paginate(5)
-            ->withQueryString();
+    // Mengambil ID Dosen / User yang sedang login
+    $user = Auth::user(); 
 
-        return Inertia::render('Dosen/Absensi/Index', [
-            'kelas' => $kelas,
-            'filters' => [
-                'search' => $search,
-                'semester' => $semester
-            ]
-        ]);
-    }
+    $kelas = KelasPraktikum::with(['dosen', 'ruangan', 'pertemuan'])
+        ->withCount('pertemuan')
+        // 🔒 FILTER UTAMA: Hanya ambil kelas milik dosen yang login
+        // Kasus 1: Jika kolom 'dosen_id' langsung menyimpan ID User/Dosen
+        ->where('dosen_id', $user->id)
+        
+        /* 
+        // Kasus 2: Jika 'dosen_id' merujuk ke tabel 'dosens' (di mana user_id ada di tabel dosens):
+        ->whereHas('dosen', function ($q) use ($user) {
+            $q->where('user_id', $user->id);
+        })
+        */
 
+        ->when($search, function ($query, $search) {
+            // Membungkus kondisi OR ke dalam sub-query agar tidak merusak filter dosen_id
+            $query->where(function ($q) use ($search) {
+                $q->where('nama_praktikum', 'like', "%{$search}%")
+                  ->orWhere('kode_kelas', 'like', "%{$search}%")
+                  ->orWhere('nama_kelas', 'like', "%{$search}%");
+            });
+        })
+        ->when($semester, function ($query, $semester) {
+            $query->where('semester', $semester);
+        })
+        ->latest()
+        ->paginate(5)
+        ->withQueryString();
+
+    return Inertia::render('Dosen/Absensi/Index', [
+        'kelas' => $kelas,
+        'filters' => [
+            'search' => $search,
+            'semester' => $semester
+        ]
+    ]);
+}
     // Membuat Kelas Baru + Otomatis Membuat 14 Lembar Pertemuan
     public function storeKelas(Request $request)
     {
@@ -195,6 +212,38 @@ class DosenAbsensiController extends Controller
         $namaFile = 'Rekap-Absensi-' . Str::slug($kelas->nama_praktikum) . '-' . Str::slug($kelas->nama_kelas) . '.pdf';
         
         return $pdf->download($namaFile);
+    }
+
+    // Menghapus Kelas Praktikum beserta data relasinya
+    public function destroy($id)
+    {
+        $kelas = KelasPraktikum::findOrFail($id);
+
+        // 🔒 Proteksi Keamanan: Pastikan hanya dosen pemilik kelas yang bisa menghapus
+        if ($kelas->dosen_id !== auth()->id()) {
+            abort(403, 'Anda tidak memiliki akses untuk menghapus kelas ini.');
+        }
+
+        DB::transaction(function () use ($kelas) {
+            // 1. Ambil semua ID pertemuan yang terikat dengan kelas ini
+            $pertemuanIds = PertemuanAbsensi::where('kelas_praktikum_id', $kelas->id)->pluck('id');
+
+            // 2. Hapus detail absensi terkait
+            DetailAbsensi::whereIn('pertemuan_absensi_id', $pertemuanIds)->delete();
+
+            // 3. Hapus pertemuan absensi
+            PertemuanAbsensi::whereIn('id', $pertemuanIds)->delete();
+
+            // 4. Hapus relasi pivot mahasiswa (jika ada relasi belongsToMany)
+            if (method_exists($kelas, 'mahasiswa')) {
+                $kelas->mahasiswa()->detach();
+            }
+
+            // 5. Hapus kelas praktikum
+            $kelas->delete();
+        });
+
+        return redirect()->back()->with('success', 'Kelas Praktikum dan seluruh data absensi terkait berhasil dihapus.');
     }
  
 }

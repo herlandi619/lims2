@@ -1,24 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import MahasiswaLayout from '@/Layouts/MahasiswaLayout';
-import { Link, router, usePage } from '@inertiajs/react';
-import Swal from 'sweetalert2';
+import React, { useState } from 'react';
+import { Head, router } from '@inertiajs/react';
+import MahasiswaLayout from '@/Layouts/MahasiswaLayout'; // Sesuaikan path jika berbeda (misal: '../../Layouts/MahasiswaLayout')
 
 export default function Index({ jadwalList, filters }) {
-    const { flash } = usePage().props;
     const [search, setSearch] = useState(filters.search || '');
-    const [selectedJadwal, setSelectedJadwal] = useState(null);
-    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
-    // Alert SweetAlert jika ada flash message
-    useEffect(() => {
-        if (flash?.success) {
-            Swal.fire({ title: 'Berhasil!', text: flash.success, icon: 'success', confirmButtonColor: '#4F46E5' });
-        }
-        if (flash?.error) {
-            Swal.fire({ title: 'Gagal!', text: flash.error, icon: 'error', confirmButtonColor: '#EF4444' });
-        }
-    }, [flash]);
-
+    // Handle Pencarian
     const handleSearch = (e) => {
         e.preventDefault();
         router.get(
@@ -28,106 +15,92 @@ export default function Index({ jadwalList, filters }) {
         );
     };
 
-    const handleOpenDetail = (item) => {
-        setSelectedJadwal(item);
-        setIsDetailModalOpen(true);
-    };
-
-    const getHariBadge = (hari) => {
-        const colors = {
-            Senin: 'bg-blue-100 text-blue-800',
-            Selasa: 'bg-green-100 text-green-800',
-            Rabu: 'bg-purple-100 text-purple-800',
-            Kamis: 'bg-amber-100 text-amber-800',
-            Jumat: 'bg-emerald-100 text-emerald-800',
-            Sabtu: 'bg-rose-100 text-rose-800',
-            Minggu: 'bg-gray-100 text-gray-800',
-        };
-        return colors[hari] || 'bg-gray-100 text-gray-800';
-    };
-
     return (
-        <MahasiswaLayout header={<h2 className="font-semibold text-xl text-gray-800">Jadwal Laboratorium</h2>}>
-            <div className="py-6 max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        <MahasiswaLayout>
+            <Head title="Jadwal Praktikum Saya" />
 
-                {/* Header Action / Title */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-gray-100 pb-4 bg-white p-6 rounded-xl shadow-sm">
-                    <div>
-                        <h2 className="text-2xl font-bold text-gray-800">Jadwal Praktikum Laboratorium</h2>
-                        <p className="text-sm text-gray-500 mt-0.5">Lihat daftar jadwal praktikum dan penggunaan laboratorium</p>
-                    </div>
+            <div className="space-y-6">
+                {/* Header */}
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-800">Jadwal Laboratorium Saya</h1>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                        Daftar jadwal praktikum yang Anda ikuti semester ini.
+                    </p>
                 </div>
 
-                {/* Filter & Table Card */}
-                <div className="bg-white p-6 rounded-xl shadow-sm space-y-4">
-                    <form onSubmit={handleSearch} className="flex gap-2 max-w-md">
+                {/* Filter & Search */}
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                    <form onSubmit={handleSearch} className="flex gap-2">
                         <input
                             type="text"
-                            placeholder="Cari Mata Kuliah, Dosen, Ruangan, atau Hari..."
-                            className="w-full border-gray-300 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Cari mata kuliah, ruangan, atau dosen..."
+                            className="w-full px-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         <button
                             type="submit"
-                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition"
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                         >
                             Cari
                         </button>
                     </form>
+                </div>
 
-                    {/* Table Data */}
+                {/* Table Data */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                     <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200 text-sm">
-                            <thead className="bg-gray-50">
+                        <table className="w-full text-left text-sm text-gray-600">
+                            <thead className="bg-gray-50 text-gray-700 font-semibold border-b">
                                 <tr>
-                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">Hari & Waktu</th>
-                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">Mata Kuliah / Kelas</th>
-                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">Ruangan</th>
-                                    <th className="px-4 py-3 text-left font-semibold text-gray-600">Dosen Pengampu</th>
-                                    <th className="px-4 py-3 text-center font-semibold text-gray-600">Aksi</th>
+                                    <th className="px-6 py-3">Hari & Waktu</th>
+                                    <th className="px-6 py-3">Mata Kuliah & Kelas</th>
+                                    <th className="px-6 py-3">Ruangan</th>
+                                    <th className="px-6 py-3">Dosen Pengampu</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200">
+                            <tbody className="divide-y divide-gray-100">
                                 {jadwalList.data.length > 0 ? (
                                     jadwalList.data.map((item) => (
-                                        <tr key={item.id} className="hover:bg-gray-50">
-                                            <td className="px-4 py-3 whitespace-nowrap">
-                                                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getHariBadge(item.hari)}`}>
+                                        <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                                            <td className="px-6 py-4">
+                                                <span className="capitalize font-semibold text-gray-800 block">
                                                     {item.hari}
                                                 </span>
-                                                <div className="text-xs text-gray-600 mt-1 font-medium">
+                                                <span className="text-xs text-gray-500">
                                                     {item.jam_mulai} - {item.jam_selesai} WIB
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="font-medium text-gray-900">
+                                                    {item.kelas_praktikum?.nama_praktikum || '-'}
                                                 </div>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div className="font-semibold text-gray-800">{item.mata_kuliah}</div>
-                                                <div className="text-xs text-gray-500">Kelas: {item.kelas || '-'}</div>
-                                            </td>
-                                            <td className="px-4 py-3 whitespace-nowrap">
-                                                <div className="font-medium text-gray-800">{item.ruangan?.nama_ruangan || '-'}</div>
                                                 <div className="text-xs text-gray-500">
-                                                    {item.ruangan?.kode_ruangan ? `(${item.ruangan.kode_ruangan})` : ''} - {item.ruangan?.lokasi || '-'}
+                                                    Kode: {item.kelas_praktikum?.kode_kelas || '-'} ({item.kelas_praktikum?.nama_kelas || '-'})
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-3 whitespace-nowrap">
-                                                <div className="text-gray-800 font-medium">{item.dosen?.name || 'Dosen Tidak Terdaftar'}</div>
-                                                <div className="text-xs text-gray-500">{item.dosen?.email || '-'}</div>
+                                            <td className="px-6 py-4">
+                                                <div className="font-medium text-gray-800">
+                                                    {item.ruangan?.nama_ruangan || '-'}
+                                                </div>
+                                                <div className="text-xs text-gray-500">
+                                                    {item.ruangan?.kode_ruangan} - {item.ruangan?.lokasi}
+                                                </div>
                                             </td>
-                                            <td className="px-4 py-3 text-center whitespace-nowrap">
-                                                <button
-                                                    onClick={() => handleOpenDetail(item)}
-                                                    className="px-3 py-1 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded text-xs font-semibold transition"
-                                                >
-                                                    Detail
-                                                </button>
+                                            <td className="px-6 py-4">
+                                                <div className="font-medium text-gray-800">
+                                                    {item.kelas_praktikum?.dosen?.name || 'Belum ditentukan'}
+                                                </div>
+                                                <div className="text-xs text-gray-500">
+                                                    {item.kelas_praktikum?.dosen?.email || '-'}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="5" className="text-center py-6 text-gray-500">
-                                            Tidak ada jadwal laboratorium yang ditemukan.
+                                        <td colSpan="4" className="px-6 py-8 text-center text-gray-500">
+                                            Tidak ada jadwal laboratorium yang ditemukan untuk kelas Anda.
                                         </td>
                                     </tr>
                                 )}
@@ -135,86 +108,31 @@ export default function Index({ jadwalList, filters }) {
                         </table>
                     </div>
 
-                    {/* Pagination (5 Items) */}
-                    <div className="flex flex-col sm:flex-row justify-between items-center text-sm pt-2 gap-2">
-                        <span className="text-gray-600">
-                            Menampilkan {jadwalList.from ?? 0} - {jadwalList.to ?? 0} dari {jadwalList.total} jadwal
-                        </span>
-                        <div className="flex gap-1">
-                            {jadwalList.links.map((link, idx) => (
-                                <Link
-                                    key={idx}
-                                    href={link.url || '#'}
-                                    dangerouslySetInnerHTML={{ __html: link.label }}
-                                    className={`px-3 py-1.5 border rounded-md text-xs font-medium transition ${
-                                        link.active
-                                            ? 'bg-indigo-600 text-white border-indigo-600'
-                                            : 'bg-white text-gray-700 hover:bg-gray-50'
-                                    } ${!link.url ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                />
-                            ))}
+                    {/* Pagination Link */}
+                    {jadwalList.links && (
+                        <div className="p-4 border-t flex justify-between items-center text-xs text-gray-500">
+                            <div>
+                                Menampilkan {jadwalList.from || 0} - {jadwalList.to || 0} dari {jadwalList.total} data
+                            </div>
+                            <div className="flex gap-1">
+                                {jadwalList.links.map((link, idx) => (
+                                    <button
+                                        key={idx}
+                                        disabled={!link.url}
+                                        onClick={() => router.get(link.url, {}, { preserveState: true })}
+                                        className={`px-3 py-1.5 rounded ${
+                                            link.active
+                                                ? 'bg-blue-600 text-white font-medium'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        } ${!link.url ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        dangerouslySetInnerHTML={{ __html: link.label }}
+                                    />
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
-
-            {/* MODAL DETAIL JADWAL */}
-            {isDetailModalOpen && selectedJadwal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-xl p-6 max-w-lg w-full space-y-4 shadow-xl">
-                        <div className="flex justify-between items-center border-b pb-3">
-                            <h3 className="text-lg font-bold text-gray-800">Detail Jadwal Praktikum</h3>
-                            <button
-                                onClick={() => setIsDetailModalOpen(false)}
-                                className="text-gray-400 hover:text-gray-600"
-                            >
-                                ✕
-                            </button>
-                        </div>
-
-                        <div className="space-y-3 text-sm">
-                            <div className="grid grid-cols-3 border-b pb-2">
-                                <span className="font-semibold text-gray-600">Mata Kuliah</span>
-                                <span className="col-span-2 text-gray-800 font-bold">{selectedJadwal.nama_mata_kuliah}</span>
-                            </div>
-                            <div className="grid grid-cols-3 border-b pb-2">
-                                <span className="font-semibold text-gray-600">Kelas</span>
-                                <span className="col-span-2 text-gray-800">{selectedJadwal.kelas || '-'}</span>
-                            </div>
-                            <div className="grid grid-cols-3 border-b pb-2">
-                                <span className="font-semibold text-gray-600">Hari & Waktu</span>
-                                <span className="col-span-2 text-gray-800">
-                                    {selectedJadwal.hari}, {selectedJadwal.jam_mulai} - {selectedJadwal.jam_selesai} WIB
-                                </span>
-                            </div>
-                            <div className="grid grid-cols-3 border-b pb-2">
-                                <span className="font-semibold text-gray-600">Ruangan Lab</span>
-                                <span className="col-span-2 text-gray-800">
-                                    {selectedJadwal.ruangan?.nama_ruangan} ({selectedJadwal.ruangan?.kode_ruangan}) <br />
-                                    <span className="text-xs text-gray-500">Lokasi: {selectedJadwal.ruangan?.lokasi || '-'}</span>
-                                </span>
-                            </div>
-                            <div className="grid grid-cols-3 border-b pb-2">
-                                <span className="font-semibold text-gray-600">Dosen Pengampu</span>
-                                <span className="col-span-2 text-gray-800">
-                                    {selectedJadwal.dosen?.name || '-'} <br />
-                                    <span className="text-xs text-gray-500">{selectedJadwal.dosen?.email || '-'}</span>
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="flex justify-end pt-3">
-                            <button
-                                type="button"
-                                onClick={() => setIsDetailModalOpen(false)}
-                                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg"
-                            >
-                                Tutup
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </MahasiswaLayout>
     );
 }

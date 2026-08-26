@@ -84,6 +84,28 @@ export default function Index({ kelas, ruangan, filters }) {
         });
     };
 
+    // Destroy
+        const handleDeleteKelas = (kelasId) => {
+        Swal.fire({
+            title: 'Hapus Kelas Praktikum?',
+            text: 'Seluruh data 14 pertemuan dan riwayat absensi di kelas ini akan dihapus permanen!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Ya, Hapus Kelas',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.delete(route('dosen.absensi.destroy', kelasId), {
+                    onSuccess: () => {
+                        Swal.fire('Terhapus!', 'Kelas praktikum berhasil dihapus.', 'success');
+                    }
+                });
+            }
+        });
+    };
+
     return (
         <DosenLayout title="Absensi Laboratorium Farmasi">
             <Head title="Absensi Praktikum - Lab Farmasi" />
@@ -153,14 +175,25 @@ export default function Index({ kelas, ruangan, filters }) {
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-center">
-                                            <button
-                                                onClick={() => openMapPertemuan(item)}
-                                                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg"
-                                            >
-                                                Buka Map Absensi (14)
-                                            </button>
+                                            <div className="flex items-center justify-center gap-2">
+                                                <button
+                                                    onClick={() => openMapPertemuan(item)}
+                                                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition-colors"
+                                                >
+                                                    Buka Map Absensi (14)
+                                                </button>
+
+                                                {/* 🗑️ TOMBOL DELETE KELAS */}
+                                                <button
+                                                    onClick={() => handleDeleteKelas(item.id)}
+                                                    className="px-2.5 py-1.5 bg-red-100 hover:bg-red-200 text-red-600 text-xs font-medium rounded-lg transition-colors"
+                                                    title="Hapus Kelas Praktikum"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </div>
                                         </td>
-                                    </tr>
+                                                                            </tr>
                                 ))
                             ) : (
                                 <tr>

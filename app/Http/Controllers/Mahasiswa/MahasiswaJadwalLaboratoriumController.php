@@ -16,36 +16,47 @@ class MahasiswaJadwalLaboratoriumController extends Controller
     {
         $search = $request->query('search');
 
-        // Query urutan hari menggunakan CASE WHEN (Kompatibel untuk SQLite & MySQL)
+        // Query urutan hari menggunakan CASE WHEN
         $orderHariSql = "
             CASE hari
-                WHEN 'Senin' THEN 1
-                WHEN 'Selasa' THEN 2
-                WHEN 'Rabu' THEN 3
-                WHEN 'Kamis' THEN 4
-                WHEN 'Jumat' THEN 5
-                WHEN 'Sabtu' THEN 6
-                WHEN 'Minggu' THEN 7
-                ELSE 8
+                WHEN 'senin' THEN 1
+                WHEN 'selasa' THEN 2
+                WHEN 'rabu' THEN 3
+                WHEN 'kamis' THEN 4
+                WHEN 'jumat' THEN 5
+                WHEN 'sabtu' THEN 6
+                ELSE 7
             END
         ";
 
-        // Fetch data jadwal laboratorium dengan relasi ruangan & dosen (users)
+        // Query Jadwal Laboratorium khusus untuk Mahasiswa yang sedang Login
         $jadwalList = JadwalLaboratorium::with([
             'ruangan:id,kode_ruangan,nama_ruangan,lokasi',
-            'dosen:id,name,email'
+            'kelasPraktikum:id,kode_kelas,nama_praktikum,nama_kelas,dosen_id',
+            'kelasPraktikum.dosen:id,name,email'
         ])
+        // Filter: Hanya ambil jadwal dari kelas praktikum yang diikuti oleh mahasiswa ini
+        ->whereHas('kelasPraktikum.mahasiswa', function ($query) {
+            $query->where('mahasiswa_id', auth()->id())
+                  ->where('status_krs', 'disetujui');
+        })
+        // Pencarian (Search)
         ->when($search, function ($query, $search) {
-            $query->where('nama_mata_kuliah', 'like', "%{$search}%")
-                  ->orWhere('hari', 'like', "%{$search}%")
-                  ->orWhere('kelas', 'like', "%{$search}%")
-                  ->orWhereHas('ruangan', function ($q) use ($search) {
-                      $q->where('nama_ruangan', 'like', "%{$search}%")
-                        ->orWhere('kode_ruangan', 'like', "%{$search}%");
+            $query->where(function ($q) use ($search) {
+                $q->where('hari', 'like', "%{$search}%")
+                  ->orWhereHas('ruangan', function ($qRuangan) use ($search) {
+                      $qRuangan->where('nama_ruangan', 'like', "%{$search}%")
+                               ->orWhere('kode_ruangan', 'like', "%{$search}%");
                   })
-                  ->orWhereHas('dosen', function ($q) use ($search) {
-                      $q->where('name', 'like', "%{$search}%");
+                  ->orWhereHas('kelasPraktikum', function ($qKelas) use ($search) {
+                      $qKelas->where('nama_praktikum', 'like', "%{$search}%")
+                             ->orWhere('nama_kelas', 'like', "%{$search}%")
+                             ->orWhere('kode_kelas', 'like', "%{$search}%")
+                             ->orWhereHas('dosen', function ($qDosen) use ($search) {
+                                 $qDosen->where('name', 'like', "%{$search}%");
+                             });
                   });
+            });
         })
         ->orderByRaw($orderHariSql)
         ->orderBy('jam_mulai', 'asc')
@@ -68,45 +79,43 @@ class MahasiswaJadwalLaboratoriumController extends Controller
         ]);
     }
 
-    // Metode store jika di kemudian hari mahasiswa/dosen mengajukan/menambahkan jadwal baru
     public function store(Request $request)
     {
         $request->validate([
-            'ruangan_id'       => 'required|exists:ruangan,id',
-            'dosen_id'         => 'required|exists:users,id',
-            'nama_mata_kuliah' => 'required|string|max:255',
-            'kelas'            => 'required|string|max:50',
-            'hari'             => 'required|string|in:Senin,Selasa,Rabu,Kamis,Jumat,Sabtu,Minggu',
-            'jam_mulai'        => 'required|date_format:H:i',
-            'jam_selesai'      => 'required|date_format:H:i|after:jam_mulai',
+            'kelas_praktikum_id' => 'required|exists:kelas_praktikum,id',
+            'ruangan_id'         => 'required|exists:ruangan,id',
+            'hari'               => 'required|string|in:senin,selasa,rabu,kamis,jumat,sabtu',
+            'jam_mulai'          => 'required|date_format:H:i',
+            'jam_selesai'        => 'required|date_format:H:i|after:jam_mulai',
         ]);
 
         try {
             DB::transaction(function () use ($request) {
-                // 1. Simpan Jadwal Laboratorium
+                // 1. Simpan Jadwal Laboratorium Baru
                 $jadwal = JadwalLaboratorium::create([
-                    'ruangan_id'       => $request->ruangan_id,
-                    'dosen_id'         => $request->dosen_id,
-                    'nama_mata_kuliah' => $request->nama_mata_kuliah,
-                    'kelas'            => $request->kelas,
-                    'hari'             => $request->hari,
-                    'jam_mulai'        => $request->jam_mulai,
-                    'jam_selesai'      => $request->jam_selesai,
+                    'kelas_praktikum_id' => $request->kelas_praktikum_id,
+                    'ruangan_id'         => $request->ruangan_id,
+                    'hari'               => strtolower($request->hari),
+                    'jam_mulai'          => $request->jam_mulai,
+                    'jam_selesai'        => $request->jam_selesai,
                 ]);
 
-                // 2. Catat Log Aktivitas (Activity Logs)
+                // Load relasi kelasPraktikum untuk teks log/notifikasi
+                $jadwal->load('kelasPraktikum');
+
+                // 2. Catat Log Aktivitas
                 ActivityLog::create([
-                    'user_id'    => auth()->id(),
-                    'aktivitas' => "Menambahkan jadwal praktikum '{$request->nama_mata_kuliah}' (Kelas {$request->kelas}) pada hari {$request->hari} ({$request->jam_mulai} - {$request->jam_selesai})",
+                    'user_id'   => auth()->id(),
+                    'aktivitas' => "Menambahkan jadwal praktikum '{$jadwal->kelasPraktikum->nama_praktikum}' ({$jadwal->kelasPraktikum->nama_kelas}) pada hari {$request->hari} ({$request->jam_mulai} - {$request->jam_selesai})",
                     'ip_address' => $request->ip(),
-                    'browser'    => $request->userAgent(),
+                    'browser'   => $request->userAgent(),
                 ]);
 
                 // 3. Kirim Notifikasi ke User
                 Notifikasi::create([
                     'user_id'      => auth()->id(),
                     'judul'        => 'Jadwal Laboratorium Baru',
-                    'isi'          => "Jadwal praktikum '{$request->nama_mata_kuliah}' kelas {$request->kelas} untuk hari {$request->hari} ({$request->jam_mulai} - {$request->jam_selesai}) berhasil ditambahkan.",
+                    'isi'          => "Jadwal praktikum '{$jadwal->kelasPraktikum->nama_praktikum}' kelas {$jadwal->kelasPraktikum->nama_kelas} untuk hari {$request->hari} ({$request->jam_mulai} - {$request->jam_selesai}) berhasil ditambahkan.",
                     'sudah_dibaca' => false,
                 ]);
             });

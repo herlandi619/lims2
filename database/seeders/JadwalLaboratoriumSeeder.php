@@ -3,68 +3,63 @@
 namespace Database\Seeders;
 
 use App\Models\JadwalLaboratorium;
+use App\Models\KelasPraktikum;
+use App\Models\Ruangan;
 use Illuminate\Database\Seeder;
 
 class JadwalLaboratoriumSeeder extends Seeder
 {
     public function run(): void
     {
-        $jadwal = [
+        // Ambil semua ID kelas praktikum dan ruangan yang tersedia
+        $kelasIds = KelasPraktikum::pluck('id')->toArray();
+        $ruanganIds = Ruangan::pluck('id')->toArray();
 
+        // Cegah eksekusi jika data master kosong
+        if (empty($kelasIds) || empty($ruanganIds)) {
+            return;
+        }
+
+        $jadwal = [
             [
-                'ruangan_id' => 1,
-                'dosen_id' => 5,
-                'mata_kuliah' => 'Pemrograman Web',
-                'kelas' => 'SI-5A',
-                'hari' => 'senin',
-                'jam_mulai' => '08:00',
+                'hari'       => 'senin',
+                'jam_mulai'  => '08:00',
                 'jam_selesai' => '10:00',
             ],
-
             [
-                'ruangan_id' => 3,
-                'dosen_id' => 6,
-                'mata_kuliah' => 'Jaringan Komputer',
-                'kelas' => 'SI-5B',
-                'hari' => 'selasa',
-                'jam_mulai' => '10:00',
+                'hari'       => 'selasa',
+                'jam_mulai'  => '10:00',
                 'jam_selesai' => '12:00',
             ],
-
             [
-                'ruangan_id' => 5,
-                'dosen_id' => 5,
-                'mata_kuliah' => 'Mikrobiologi',
-                'kelas' => 'AK-3A',
-                'hari' => 'rabu',
-                'jam_mulai' => '08:00',
+                'hari'       => 'rabu',
+                'jam_mulai'  => '08:00',
                 'jam_selesai' => '10:00',
             ],
-
             [
-                'ruangan_id' => 4,
-                'dosen_id' => 7,
-                'mata_kuliah' => 'Multimedia',
-                'kelas' => 'SI-4A',
-                'hari' => 'kamis',
-                'jam_mulai' => '13:00',
+                'hari'       => 'kamis',
+                'jam_mulai'  => '13:00',
                 'jam_selesai' => '15:00',
             ],
-
             [
-                'ruangan_id' => 6,
-                'dosen_id' => 5,
-                'mata_kuliah' => 'Anatomi',
-                'kelas' => 'KEP-2A',
-                'hari' => 'jumat',
-                'jam_mulai' => '08:00',
+                'hari'       => 'jumat',
+                'jam_mulai'  => '08:00',
                 'jam_selesai' => '10:00',
             ],
-
         ];
 
-        foreach ($jadwal as $item) {
-            JadwalLaboratorium::create($item);
+        foreach ($jadwal as $index => $item) {
+            // Mengambil ID secara berurutan menggunakan modulus agar aman dari Error Foreign Key
+            $kelasId = $kelasIds[$index % count($kelasIds)];
+            $ruanganId = $ruanganIds[$index % count($ruanganIds)];
+
+            JadwalLaboratorium::create([
+                'kelas_praktikum_id' => $kelasId,
+                'ruangan_id'         => $ruanganId,
+                'hari'               => $item['hari'],
+                'jam_mulai'          => $item['jam_mulai'],
+                'jam_selesai'        => $item['jam_selesai'],
+            ]);
         }
     }
 }

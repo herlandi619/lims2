@@ -185,6 +185,7 @@ Route::middleware(['auth', 'verified'])->prefix('dosen')->name('dosen.')->group(
     Route::get('/absensi/pertemuan/{id}', [DosenAbsensiController::class, 'showPertemuan'])->name('absensi.pertemuan.show');
     Route::post('/absensi/pertemuan/{id}/simpan', [DosenAbsensiController::class, 'simpanAbsensi'])->name('absensi.pertemuan.simpan');
     Route::post('/absensi/pertemuan/{id} /generate-qr', [DosenAbsensiController::class, 'generateQr'])->name('absensi.pertemuan.qr');
+    Route::delete('/absensi/{id}', [DosenAbsensiController::class, 'destroy'])->name('absensi.destroy');
 
     // export pdf
     Route::get('/absensi/kelas/{id}/export-pdf', [DosenAbsensiController::class, 'exportPdf'])

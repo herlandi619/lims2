@@ -6,25 +6,20 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('jadwal_laboratorium', function (Blueprint $table) {
             $table->id();
 
+            // Relasi ke kelas praktikum (otomatis dapat mata_kuliah, kelas, & dosen)
+            $table->foreignId('kelas_praktikum_id')
+                ->constrained('kelas_praktikum')
+                ->cascadeOnDelete();
+
+            // Tetap dipakai jika ruangan lab berbeda dengan ruangan default kelas
             $table->foreignId('ruangan_id')
                 ->constrained('ruangan')
                 ->cascadeOnDelete();
-
-            $table->string('mata_kuliah');
-            $table->string('kelas');
-
-            $table->foreignId('dosen_id')
-                ->nullable()
-                ->constrained('users')
-                ->nullOnDelete();
 
             $table->enum('hari', [
                 'senin',
@@ -42,11 +37,9 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('jadwal_laboratoria');
+        // Diperbaiki dari 'jadwal_laboratoria' ke 'jadwal_laboratorium'
+        Schema::dropIfExists('jadwal_laboratorium');
     }
 };

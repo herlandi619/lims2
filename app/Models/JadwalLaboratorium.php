@@ -9,10 +9,10 @@ class JadwalLaboratorium extends Model
     protected $table = 'jadwal_laboratorium';
     protected $guarded = [];
 
-    public function ruangan()
-    {
-        return $this->belongsTo(Ruangan::class);
-    }
+    // public function ruangan()
+    // {
+    //     return $this->belongsTo(Ruangan::class);
+    // }
 
     public function dosen()
     {
@@ -33,5 +33,17 @@ class JadwalLaboratorium extends Model
         return $this->belongsToMany(User::class, 'krs_mahasiswa', 'jadwal_laboratorium_id', 'user_id');
     }
 
+    public function kelasPraktikum()
+    {
+        return $this->belongsTo(KelasPraktikum::class, 'kelas_praktikum_id');
+    }
+
+    /**
+     * Relasi ke model Ruangan
+     */
+    public function ruangan()
+    {
+        return $this->belongsTo(Ruangan::class, 'ruangan_id');
+    }
 
 }

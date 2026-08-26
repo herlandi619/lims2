@@ -34,6 +34,7 @@ export default function Index({ jadwalList, filters }) {
     };
 
     const getHariBadge = (hari) => {
+        const formattedHari = hari ? hari.charAt(0).toUpperCase() + hari.slice(1).toLowerCase() : '';
         const colors = {
             Senin: 'bg-blue-100 text-blue-800',
             Selasa: 'bg-green-100 text-green-800',
@@ -43,7 +44,7 @@ export default function Index({ jadwalList, filters }) {
             Sabtu: 'bg-rose-100 text-rose-800',
             Minggu: 'bg-gray-100 text-gray-800',
         };
-        return colors[hari] || 'bg-gray-100 text-gray-800';
+        return colors[formattedHari] || 'bg-gray-100 text-gray-800';
     };
 
     return (
@@ -63,7 +64,7 @@ export default function Index({ jadwalList, filters }) {
                     <form onSubmit={handleSearch} className="flex gap-2 max-w-md">
                         <input
                             type="text"
-                            placeholder="Cari Mata Kuliah, Dosen, Ruangan, atau Hari..."
+                            placeholder="Cari Praktikum, Kelas, Ruangan, atau Hari..."
                             className="w-full border-gray-300 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
@@ -93,7 +94,7 @@ export default function Index({ jadwalList, filters }) {
                                     jadwalList.data.map((item) => (
                                         <tr key={item.id} className="hover:bg-gray-50">
                                             <td className="px-4 py-3 whitespace-nowrap">
-                                                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getHariBadge(item.hari)}`}>
+                                                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${getHariBadge(item.hari)}`}>
                                                     {item.hari}
                                                 </span>
                                                 <div className="text-xs text-gray-600 mt-1 font-medium">
@@ -101,8 +102,12 @@ export default function Index({ jadwalList, filters }) {
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3">
-                                                <div className="font-semibold text-gray-800">{item.nama_mata_kuliah}</div>
-                                                <div className="text-xs text-gray-500">Kelas: {item.kelas || '-'}</div>
+                                                <div className="font-semibold text-gray-800">
+                                                    {item.kelas_praktikum?.nama_praktikum || '-'}
+                                                </div>
+                                                <div className="text-xs text-gray-500">
+                                                    Kelas: {item.kelas_praktikum?.nama_kelas || item.kelas_praktikum?.kode_kelas || '-'}
+                                                </div>
                                             </td>
                                             <td className="px-4 py-3 whitespace-nowrap">
                                                 <div className="font-medium text-gray-800">{item.ruangan?.nama_ruangan || '-'}</div>
@@ -111,8 +116,12 @@ export default function Index({ jadwalList, filters }) {
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3 whitespace-nowrap">
-                                                <div className="text-gray-800 font-medium">{item.dosen?.name || 'Dosen Tidak Terdaftar'}</div>
-                                                <div className="text-xs text-gray-500">{item.dosen?.email || '-'}</div>
+                                                <div className="text-gray-800 font-medium">
+                                                    {item.kelas_praktikum?.dosen?.name || 'Dosen Tidak Terdaftar'}
+                                                </div>
+                                                <div className="text-xs text-gray-500">
+                                                    {item.kelas_praktikum?.dosen?.email || '-'}
+                                                </div>
                                             </td>
                                             <td className="px-4 py-3 text-center whitespace-nowrap">
                                                 <button
@@ -135,7 +144,7 @@ export default function Index({ jadwalList, filters }) {
                         </table>
                     </div>
 
-                    {/* Pagination (5 Items) */}
+                    {/* Pagination */}
                     <div className="flex flex-col sm:flex-row justify-between items-center text-sm pt-2 gap-2">
                         <span className="text-gray-600">
                             Menampilkan {jadwalList.from ?? 0} - {jadwalList.to ?? 0} dari {jadwalList.total} jadwal
@@ -174,16 +183,20 @@ export default function Index({ jadwalList, filters }) {
 
                         <div className="space-y-3 text-sm">
                             <div className="grid grid-cols-3 border-b pb-2">
-                                <span className="font-semibold text-gray-600">Mata Kuliah</span>
-                                <span className="col-span-2 text-gray-800 font-bold">{selectedJadwal.nama_mata_kuliah}</span>
+                                <span className="font-semibold text-gray-600">Nama Praktikum</span>
+                                <span className="col-span-2 text-gray-800 font-bold">
+                                    {selectedJadwal.kelas_praktikum?.nama_praktikum || '-'}
+                                </span>
                             </div>
                             <div className="grid grid-cols-3 border-b pb-2">
                                 <span className="font-semibold text-gray-600">Kelas</span>
-                                <span className="col-span-2 text-gray-800">{selectedJadwal.kelas || '-'}</span>
+                                <span className="col-span-2 text-gray-800">
+                                    {selectedJadwal.kelas_praktikum?.nama_kelas || selectedJadwal.kelas_praktikum?.kode_kelas || '-'}
+                                </span>
                             </div>
                             <div className="grid grid-cols-3 border-b pb-2">
                                 <span className="font-semibold text-gray-600">Hari & Waktu</span>
-                                <span className="col-span-2 text-gray-800">
+                                <span className="col-span-2 text-gray-800 capitalize">
                                     {selectedJadwal.hari}, {selectedJadwal.jam_mulai} - {selectedJadwal.jam_selesai} WIB
                                 </span>
                             </div>
@@ -197,8 +210,8 @@ export default function Index({ jadwalList, filters }) {
                             <div className="grid grid-cols-3 border-b pb-2">
                                 <span className="font-semibold text-gray-600">Dosen Pengampu</span>
                                 <span className="col-span-2 text-gray-800">
-                                    {selectedJadwal.dosen?.name || '-'} <br />
-                                    <span className="text-xs text-gray-500">{selectedJadwal.dosen?.email || '-'}</span>
+                                    {selectedJadwal.kelas_praktikum?.dosen?.name || '-'} <br />
+                                    <span className="text-xs text-gray-500">{selectedJadwal.kelas_praktikum?.dosen?.email || '-'}</span>
                                 </span>
                             </div>
                         </div>

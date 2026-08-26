@@ -6,20 +6,20 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\BookingRuangan;
 use App\Models\JadwalLaboratorium;
+use App\Models\KelasPraktikum;
 use App\Models\Notifikasi;
 use App\Models\Ruangan;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
-
+ 
 class LaboranManajemenRuanganController extends Controller
 {
     public function index(Request $request)
     {
         $searchBooking = $request->input('search_booking');
-        $searchJadwal = $request->input('search_jadwal');
-        $activeTab = $request->input('tab', 'booking');
+        $searchJadwal  = $request->input('search_jadwal');
+        $activeTab     = $request->input('tab', 'booking');
 
         // Data Booking Ruangan (Paginate 5)
         $booking = BookingRuangan::with(['user', 'ruangan'])
@@ -32,27 +32,34 @@ class LaboranManajemenRuanganController extends Controller
             ->paginate(5, ['*'], 'booking_page')
             ->withQueryString();
 
-        // Data Jadwal Lab (Paginate 5)
-        $jadwal = JadwalLaboratorium::with(['ruangan', 'dosen'])
+        // Data Jadwal Lab via relasi kelasPraktikum (Paginate 5)
+        $jadwal = JadwalLaboratorium::with([
+                'ruangan', 
+                'kelasPraktikum.dosen'
+            ])
             ->when($searchJadwal, function ($q) use ($searchJadwal) {
-                $q->where('mata_kuliah', 'like', "%{$searchJadwal}%")
-                  ->orWhere('kelas', 'like', "%{$searchJadwal}%")
-                  ->orWhereHas('ruangan', fn($r) => $r->where('nama_ruangan', 'like', "%{$searchJadwal}%"));
+                $q->whereHas('kelasPraktikum', function ($kp) use ($searchJadwal) {
+                    $kp->where('nama_praktikum', 'like', "%{$searchJadwal}%")
+                       ->orWhere('nama_kelas', 'like', "%{$searchJadwal}%")
+                       ->orWhere('kode_kelas', 'like', "%{$searchJadwal}%")
+                       ->orWhereHas('dosen', fn($d) => $d->where('name', 'like', "%{$searchJadwal}%"));
+                })
+                ->orWhereHas('ruangan', fn($r) => $r->where('nama_ruangan', 'like', "%{$searchJadwal}%"));
             })
             ->latest()
             ->paginate(5, ['*'], 'jadwal_page')
             ->withQueryString();
 
         // Master Data untuk Dropdown Form Jadwal
-        $ruangan = Ruangan::where('status', 'aktif')->get();
-        $dosen = User::where('role', 'dosen')->get();
+        $ruanganList        = Ruangan::where('status', 'aktif')->get();
+        $kelasPraktikumList = KelasPraktikum::with('dosen:id,name,email')->get();
 
         return Inertia::render('Laboran/RuanganManajemen/Index', [
-            'bookingList' => $booking,
-            'jadwalList'  => $jadwal,
-            'ruanganList' => $ruangan,
-            'dosenList'   => $dosen,
-            'filters'     => [
+            'bookingList'        => $booking,
+            'jadwalList'         => $jadwal,
+            'ruanganList'        => $ruanganList,
+            'kelasPraktikumList' => $kelasPraktikumList,
+            'filters'            => [
                 'search_booking' => $searchBooking,
                 'search_jadwal'  => $searchJadwal,
                 'tab'            => $activeTab,
@@ -66,7 +73,6 @@ class LaboranManajemenRuanganController extends Controller
         $request->validate(['catatan' => 'nullable|string']);
 
         DB::transaction(function () use ($booking, $request) {
-            // 1. UPDATE BOOKING
             $booking->update([
                 'status'  => 'disetujui',
                 'catatan' => $request->catatan,
@@ -74,7 +80,6 @@ class LaboranManajemenRuanganController extends Controller
 
             $namaRuangan = $booking->ruangan->nama_ruangan ?? 'Ruangan';
 
-            // 2. STORE ACTIVITY LOG
             ActivityLog::create([
                 'user_id'    => auth()->id(),
                 'aktivitas'  => "Menyetujui booking ruangan {$namaRuangan} untuk pemohon (ID: {$booking->user_id})",
@@ -82,7 +87,6 @@ class LaboranManajemenRuanganController extends Controller
                 'browser'    => substr($request->userAgent() ?? '', 0, 255),
             ]);
 
-            // 3. STORE NOTIFIKASI (Ke Pemohon Booking)
             Notifikasi::create([
                 'user_id'      => $booking->user_id,
                 'judul'        => 'Booking Ruangan Disetujui',
@@ -99,7 +103,6 @@ class LaboranManajemenRuanganController extends Controller
         $request->validate(['catatan' => 'required|string']);
 
         DB::transaction(function () use ($booking, $request) {
-            // 1. UPDATE BOOKING
             $booking->update([
                 'status'  => 'ditolak',
                 'catatan' => $request->catatan,
@@ -107,7 +110,6 @@ class LaboranManajemenRuanganController extends Controller
 
             $namaRuangan = $booking->ruangan->nama_ruangan ?? 'Ruangan';
 
-            // 2. STORE ACTIVITY LOG
             ActivityLog::create([
                 'user_id'    => auth()->id(),
                 'aktivitas'  => "Menolak booking ruangan {$namaRuangan} untuk pemohon (ID: {$booking->user_id})",
@@ -115,7 +117,6 @@ class LaboranManajemenRuanganController extends Controller
                 'browser'    => substr($request->userAgent() ?? '', 0, 255),
             ]);
 
-            // 3. STORE NOTIFIKASI (Ke Pemohon Booking)
             Notifikasi::create([
                 'user_id'      => $booking->user_id,
                 'judul'        => 'Booking Ruangan Ditolak',
@@ -130,12 +131,10 @@ class LaboranManajemenRuanganController extends Controller
     public function finishBooking(Request $request, BookingRuangan $booking)
     {
         DB::transaction(function () use ($booking, $request) {
-            // 1. UPDATE BOOKING
             $booking->update(['status' => 'selesai']);
 
             $namaRuangan = $booking->ruangan->nama_ruangan ?? 'Ruangan';
 
-            // 2. STORE ACTIVITY LOG
             ActivityLog::create([
                 'user_id'    => auth()->id(),
                 'aktivitas'  => "Menandai selesai sesi booking ruangan {$namaRuangan} (ID Booking: {$booking->id})",
@@ -143,7 +142,6 @@ class LaboranManajemenRuanganController extends Controller
                 'browser'    => substr($request->userAgent() ?? '', 0, 255),
             ]);
 
-            // 3. STORE NOTIFIKASI (Ke Pemohon Booking)
             Notifikasi::create([
                 'user_id'      => $booking->user_id,
                 'judul'        => 'Sesi Booking Selesai',
@@ -159,42 +157,41 @@ class LaboranManajemenRuanganController extends Controller
     public function storeJadwal(Request $request)
     {
         $validated = $request->validate([
-            'ruangan_id'  => 'required|exists:ruangan,id',
-            'mata_kuliah' => 'required|string|max:255',
-            'kelas'       => 'required|string|max:255',
-            'dosen_id'    => 'nullable|exists:users,id',
-            'hari'        => 'required|in:senin,selasa,rabu,kamis,jumat,sabtu',
-            'jam_mulai'   => 'required',
-            'jam_selesai' => 'required|after:jam_mulai',
+            'kelas_praktikum_id' => 'required|exists:kelas_praktikum,id',
+            'ruangan_id'         => 'required|exists:ruangan,id',
+            'hari'               => 'required|in:senin,selasa,rabu,kamis,jumat,sabtu,minggu',
+            'jam_mulai'          => 'required|date_format:H:i',
+            'jam_selesai'        => 'required|date_format:H:i|after:jam_mulai',
         ]);
 
         DB::transaction(function () use ($validated, $request) {
-            // 1. STORE JADWAL
             $jadwal = JadwalLaboratorium::create($validated);
+            $jadwal->load('kelasPraktikum.dosen');
 
-            // 2. STORE ACTIVITY LOG
+            $namaPraktikum = $jadwal->kelasPraktikum->nama_praktikum ?? 'Praktikum';
+            $namaKelas     = $jadwal->kelasPraktikum->nama_kelas ?? '-';
+            $dosenId       = $jadwal->kelasPraktikum->dosen_id ?? null;
+
             ActivityLog::create([
                 'user_id'    => auth()->id(),
-                'aktivitas'  => "Menambahkan jadwal lab baru: {$jadwal->mata_kuliah} ({$jadwal->kelas})",
+                'aktivitas'  => "Menambahkan jadwal lab baru: {$namaPraktikum} ({$namaKelas})",
                 'ip_address' => $request->ip(),
                 'browser'    => substr($request->userAgent() ?? '', 0, 255),
             ]);
 
-            // 3. STORE NOTIFIKASI (Kirim ke Dosen Pengampu jika dipilih)
-            if ($jadwal->dosen_id) {
+            if ($dosenId) {
                 Notifikasi::create([
-                    'user_id'      => $jadwal->dosen_id,
+                    'user_id'      => $dosenId,
                     'judul'        => 'Jadwal Praktikum Baru',
-                    'isi'          => "Anda dijadwalkan mengampu perkuliahan {$jadwal->mata_kuliah} ({$jadwal->kelas}) pada hari " . ucfirst($jadwal->hari) . " jam {$jadwal->jam_mulai} - {$jadwal->jam_selesai}.",
+                    'isi'          => "Anda dijadwalkan mengampu perkuliahan {$namaPraktikum} ({$namaKelas}) pada hari " . ucfirst($jadwal->hari) . " jam {$jadwal->jam_mulai} - {$jadwal->jam_selesai}.",
                     'sudah_dibaca' => false,
                 ]);
             }
 
-            // Notifikasi konfirmasi untuk Laboran
             Notifikasi::create([
                 'user_id'      => auth()->id(),
                 'judul'        => 'Jadwal Berhasil Ditambahkan',
-                'isi'          => "Jadwal {$jadwal->mata_kuliah} ({$jadwal->kelas}) telah berhasil disimpan.",
+                'isi'          => "Jadwal {$namaPraktikum} ({$namaKelas}) telah berhasil disimpan.",
                 'sudah_dibaca' => false,
             ]);
         });
@@ -205,33 +202,33 @@ class LaboranManajemenRuanganController extends Controller
     public function updateJadwal(Request $request, JadwalLaboratorium $jadwal)
     {
         $validated = $request->validate([
-            'ruangan_id'  => 'required|exists:ruangan,id',
-            'mata_kuliah' => 'required|string|max:255',
-            'kelas'       => 'required|string|max:255',
-            'dosen_id'    => 'nullable|exists:users,id',
-            'hari'        => 'required|in:senin,selasa,rabu,kamis,jumat,sabtu',
-            'jam_mulai'   => 'required',
-            'jam_selesai' => 'required|after:jam_mulai',
+            'kelas_praktikum_id' => 'required|exists:kelas_praktikum,id',
+            'ruangan_id'         => 'required|exists:ruangan,id',
+            'hari'               => 'required|in:senin,selasa,rabu,kamis,jumat,sabtu,minggu',
+            'jam_mulai'          => 'required|date_format:H:i',
+            'jam_selesai'        => 'required|date_format:H:i|after:jam_mulai',
         ]);
 
         DB::transaction(function () use ($jadwal, $validated, $request) {
-            // 1. UPDATE JADWAL
             $jadwal->update($validated);
+            $jadwal->load('kelasPraktikum.dosen');
 
-            // 2. STORE ACTIVITY LOG
+            $namaPraktikum = $jadwal->kelasPraktikum->nama_praktikum ?? 'Praktikum';
+            $namaKelas     = $jadwal->kelasPraktikum->nama_kelas ?? '-';
+            $dosenId       = $jadwal->kelasPraktikum->dosen_id ?? null;
+
             ActivityLog::create([
                 'user_id'    => auth()->id(),
-                'aktivitas'  => "Memperbarui jadwal lab: {$jadwal->mata_kuliah} ({$jadwal->kelas})",
+                'aktivitas'  => "Memperbarui jadwal lab: {$namaPraktikum} ({$namaKelas})",
                 'ip_address' => $request->ip(),
                 'browser'    => substr($request->userAgent() ?? '', 0, 255),
             ]);
 
-            // 3. STORE NOTIFIKASI (Ke Dosen Pengampu jika ada)
-            if ($jadwal->dosen_id) {
+            if ($dosenId) {
                 Notifikasi::create([
-                    'user_id'      => $jadwal->dosen_id,
+                    'user_id'      => $dosenId,
                     'judul'        => 'Perubahan Jadwal Praktikum',
-                    'isi'          => "Jadwal perkuliahan {$jadwal->mata_kuliah} ({$jadwal->kelas}) telah diperbarui menjadi hari " . ucfirst($jadwal->hari) . " jam {$jadwal->jam_mulai} - {$jadwal->jam_selesai}.",
+                    'isi'          => "Jadwal perkuliahan {$namaPraktikum} ({$namaKelas}) telah diperbarui menjadi hari " . ucfirst($jadwal->hari) . " jam {$jadwal->jam_mulai} - {$jadwal->jam_selesai}.",
                     'sudah_dibaca' => false,
                 ]);
             }
@@ -239,7 +236,7 @@ class LaboranManajemenRuanganController extends Controller
             Notifikasi::create([
                 'user_id'      => auth()->id(),
                 'judul'        => 'Jadwal Berhasil Diperbarui',
-                'isi'          => "Jadwal {$jadwal->mata_kuliah} ({$jadwal->kelas}) telah diperbarui.",
+                'isi'          => "Jadwal {$namaPraktikum} ({$namaKelas}) telah diperbarui.",
                 'sudah_dibaca' => false,
             ]);
         });
@@ -250,27 +247,26 @@ class LaboranManajemenRuanganController extends Controller
     public function destroyJadwal(Request $request, JadwalLaboratorium $jadwal)
     {
         DB::transaction(function () use ($jadwal, $request) {
-            $mataKuliah = $jadwal->mata_kuliah;
-            $kelas = $jadwal->kelas;
-            $dosenId = $jadwal->dosen_id;
+            $jadwal->load('kelasPraktikum');
 
-            // 1. DELETE JADWAL
+            $namaPraktikum = $jadwal->kelasPraktikum->nama_praktikum ?? 'Praktikum';
+            $namaKelas     = $jadwal->kelasPraktikum->nama_kelas ?? '-';
+            $dosenId       = $jadwal->kelasPraktikum->dosen_id ?? null;
+
             $jadwal->delete();
 
-            // 2. STORE ACTIVITY LOG
             ActivityLog::create([
                 'user_id'    => auth()->id(),
-                'aktivitas'  => "Menghapus jadwal lab: {$mataKuliah} ({$kelas})",
+                'aktivitas'  => "Menghapus jadwal lab: {$namaPraktikum} ({$namaKelas})",
                 'ip_address' => $request->ip(),
                 'browser'    => substr($request->userAgent() ?? '', 0, 255),
             ]);
 
-            // 3. STORE NOTIFIKASI (Ke Dosen jika ada)
             if ($dosenId) {
                 Notifikasi::create([
                     'user_id'      => $dosenId,
                     'judul'        => 'Jadwal Praktikum Dihapus',
-                    'isi'          => "Jadwal perkuliahan {$mataKuliah} ({$kelas}) telah dihapus dari sistem.",
+                    'isi'          => "Jadwal perkuliahan {$namaPraktikum} ({$namaKelas}) telah dihapus dari sistem.",
                     'sudah_dibaca' => false,
                 ]);
             }
@@ -278,7 +274,7 @@ class LaboranManajemenRuanganController extends Controller
             Notifikasi::create([
                 'user_id'      => auth()->id(),
                 'judul'        => 'Jadwal Berhasil Dihapus',
-                'isi'          => "Jadwal {$mataKuliah} ({$kelas}) telah dihapus dari sistem.",
+                'isi'          => "Jadwal {$namaPraktikum} ({$namaKelas}) telah dihapus dari sistem.",
                 'sudah_dibaca' => false,
             ]);
         });

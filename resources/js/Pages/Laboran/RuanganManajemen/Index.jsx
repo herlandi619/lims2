@@ -3,7 +3,15 @@ import LaboranLayout from '@/Layouts/LaboranLayout';
 import { Head, router, useForm } from '@inertiajs/react';
 import Swal from 'sweetalert2';
 
-export default function Index({ auth, bookingList, jadwalList, ruanganList, dosenList, filters, flash }) {
+export default function Index({ 
+    auth, 
+    bookingList = { data: [], links: [], total: 0 }, 
+    jadwalList = { data: [], links: [], total: 0 }, 
+    ruanganList = [], 
+    kelasPraktikumList = [], 
+    filters = {}, 
+    flash = {} 
+}) {
     const [activeTab, setActiveTab] = useState(filters.tab || 'booking');
     const [searchBooking, setSearchBooking] = useState(filters.search_booking || '');
     const [searchJadwal, setSearchJadwal] = useState(filters.search_jadwal || '');
@@ -19,10 +27,9 @@ export default function Index({ auth, bookingList, jadwalList, ruanganList, dose
 
     // Form Inertia untuk CRUD Jadwal
     const { data: jadwalData, setData: setJadwalData, post: postJadwal, processing: jadwalProcessing, errors: jadwalErrors, reset: resetJadwal } = useForm({
+        _method: 'POST',
         ruangan_id: '',
-        mata_kuliah: '',
-        kelas: '',
-        dosen_id: '',
+        kelas_praktikum_id: '',
         hari: 'senin',
         jam_mulai: '',
         jam_selesai: '',
@@ -85,10 +92,9 @@ export default function Index({ auth, bookingList, jadwalList, ruanganList, dose
         if (item) {
             setJadwalModal({ open: true, item });
             setJadwalData({
+                _method: 'PUT',
                 ruangan_id: item.ruangan_id || '',
-                mata_kuliah: item.mata_kuliah || '',
-                kelas: item.kelas || '',
-                dosen_id: item.dosen_id || '',
+                kelas_praktikum_id: item.kelas_praktikum_id || '',
                 hari: item.hari || 'senin',
                 jam_mulai: item.jam_mulai || '',
                 jam_selesai: item.jam_selesai || '',
@@ -96,13 +102,13 @@ export default function Index({ auth, bookingList, jadwalList, ruanganList, dose
         } else {
             setJadwalModal({ open: true, item: null });
             resetJadwal();
+            setJadwalData('_method', 'POST');
         }
     };
 
     const submitJadwal = (e) => {
         e.preventDefault();
         if (jadwalModal.item) {
-            // Edit via POST + spoofing
             postJadwal(route('laboran.jadwal.update', jadwalModal.item.id), {
                 onSuccess: () => setJadwalModal({ open: false, item: null }),
             });
@@ -202,7 +208,7 @@ export default function Index({ auth, bookingList, jadwalList, ruanganList, dose
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 bg-white">
-                                        {bookingList.data.length > 0 ? (
+                                        {bookingList?.data?.length > 0 ? (
                                             bookingList.data.map((item) => (
                                                 <tr key={item.id} className="hover:bg-gray-50">
                                                     <td className="px-6 py-4">
@@ -249,9 +255,9 @@ export default function Index({ auth, bookingList, jadwalList, ruanganList, dose
 
                             {/* Pagination Booking */}
                             <div className="px-6 py-4 bg-gray-50 border-t flex justify-between items-center">
-                                <span className="text-xs text-gray-500">Total: {bookingList.total} Data</span>
+                                <span className="text-xs text-gray-500">Total: {bookingList?.total || 0} Data</span>
                                 <div className="flex space-x-1">
-                                    {bookingList.links?.map((link, idx) => (
+                                    {bookingList?.links?.map((link, idx) => (
                                         <button
                                             key={idx}
                                             disabled={!link.url}
@@ -302,15 +308,17 @@ export default function Index({ auth, bookingList, jadwalList, ruanganList, dose
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 bg-white">
-                                        {jadwalList.data.length > 0 ? (
+                                        {jadwalList?.data?.length > 0 ? (
                                             jadwalList.data.map((item) => (
                                                 <tr key={item.id} className="hover:bg-gray-50">
                                                     <td className="px-6 py-4">
-                                                        <div className="font-bold text-gray-900">{item.mata_kuliah}</div>
-                                                        <div className="text-xs text-gray-500">Kelas: {item.kelas}</div>
+                                                        <div className="font-bold text-gray-900">{item.kelas_praktikum?.nama_praktikum || item.mata_kuliah}</div>
+                                                        <div className="text-xs text-gray-500">Kelas: {item.kelas_praktikum?.nama_kelas || item.kelas}</div>
                                                     </td>
                                                     <td className="px-6 py-4 text-gray-700 font-medium">{item.ruangan?.nama_ruangan}</td>
-                                                    <td className="px-6 py-4 text-gray-600 text-xs">{item.dosen?.name || '-'}</td>
+                                                    <td className="px-6 py-4 text-gray-600 text-xs">
+                                                        {item.kelas_praktikum?.dosen?.name || item.dosen?.name || '-'}
+                                                    </td>
                                                     <td className="px-6 py-4 text-xs text-gray-700">
                                                         <span className="font-semibold capitalize text-indigo-600 block">{item.hari}</span>
                                                         <span>{item.jam_mulai} - {item.jam_selesai}</span>
@@ -336,9 +344,9 @@ export default function Index({ auth, bookingList, jadwalList, ruanganList, dose
 
                             {/* Pagination Jadwal */}
                             <div className="px-6 py-4 bg-gray-50 border-t flex justify-between items-center">
-                                <span className="text-xs text-gray-500">Total: {jadwalList.total} Data</span>
+                                <span className="text-xs text-gray-500">Total: {jadwalList?.total || 0} Data</span>
                                 <div className="flex space-x-1">
-                                    {jadwalList.links?.map((link, idx) => (
+                                    {jadwalList?.links?.map((link, idx) => (
                                         <button
                                             key={idx}
                                             disabled={!link.url}
@@ -422,50 +430,30 @@ export default function Index({ auth, bookingList, jadwalList, ruanganList, dose
                                         required
                                     >
                                         <option value="">-- Pilih Ruangan --</option>
-                                        {ruanganList.map((r) => (
+                                        {ruanganList?.map((r) => (
                                             <option key={r.id} value={r.id}>{r.nama_ruangan} ({r.kode_ruangan})</option>
                                         ))}
                                     </select>
                                     {jadwalErrors.ruangan_id && <p className="text-xs text-red-500 mt-1">{jadwalErrors.ruangan_id}</p>}
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Mata Kuliah *</label>
-                                        <input
-                                            type="text"
-                                            value={jadwalData.mata_kuliah}
-                                            onChange={(e) => setJadwalData('mata_kuliah', e.target.value)}
-                                            className="w-full rounded-lg border-gray-300 shadow-sm text-sm"
-                                            required
-                                        />
-                                        {jadwalErrors.mata_kuliah && <p className="text-xs text-red-500 mt-1">{jadwalErrors.mata_kuliah}</p>}
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Kelas *</label>
-                                        <input
-                                            type="text"
-                                            value={jadwalData.kelas}
-                                            onChange={(e) => setJadwalData('kelas', e.target.value)}
-                                            className="w-full rounded-lg border-gray-300 shadow-sm text-sm"
-                                            required
-                                        />
-                                        {jadwalErrors.kelas && <p className="text-xs text-red-500 mt-1">{jadwalErrors.kelas}</p>}
-                                    </div>
-                                </div>
-
+                                {/* Menggunakan Kelas Praktikum (yang menyatu dengan Dosen) */}
                                 <div>
-                                    <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Dosen Pengampu</label>
+                                    <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Kelas Praktikum & Dosen *</label>
                                     <select
-                                        value={jadwalData.dosen_id}
-                                        onChange={(e) => setJadwalData('dosen_id', e.target.value)}
+                                        value={jadwalData.kelas_praktikum_id}
+                                        onChange={(e) => setJadwalData('kelas_praktikum_id', e.target.value)}
                                         className="w-full rounded-lg border-gray-300 shadow-sm text-sm"
+                                        required
                                     >
-                                        <option value="">-- Pilih Dosen --</option>
-                                        {dosenList.map((d) => (
-                                            <option key={d.id} value={d.id}>{d.name}</option>
+                                        <option value="">-- Pilih Kelas Praktikum / Dosen --</option>
+                                        {kelasPraktikumList?.map((kp) => (
+                                            <option key={kp.id} value={kp.id}>
+                                                {kp.nama_praktikum} - {kp.nama_kelas} ({kp.dosen?.name || 'Dosen TBD'})
+                                            </option>
                                         ))}
                                     </select>
+                                    {jadwalErrors.kelas_praktikum_id && <p className="text-xs text-red-500 mt-1">{jadwalErrors.kelas_praktikum_id}</p>}
                                 </div>
 
                                 <div className="grid grid-cols-3 gap-2">
@@ -520,7 +508,7 @@ export default function Index({ auth, bookingList, jadwalList, ruanganList, dose
                                         disabled={jadwalProcessing}
                                         className="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700"
                                     >
-                                        {jadwalProcessing ? 'Memproses...' : 'Simpan Jadwal'}
+                                        {jadwalProcessing ? 'Memproses...' : jadwalModal.item ? 'Update' : 'Simpan'}
                                     </button>
                                 </div>
                             </form>
