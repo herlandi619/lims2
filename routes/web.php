@@ -5,6 +5,8 @@ use App\Http\Controllers\Admin\AdminActivityLogController;
 use App\Http\Controllers\Admin\AdminBackupController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminMasterDataController;
+use App\Http\Controllers\Admin\AdminPenelitianController;
+use App\Http\Controllers\Admin\AdminTagihanPenelitianController;
 use App\Http\Controllers\Admin\AdminTicketController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\PengaturanDendaController;
@@ -30,7 +32,9 @@ use App\Http\Controllers\Laboran\LaboranDashboardController;
 use App\Http\Controllers\Laboran\LaboranLaporanController;
 use App\Http\Controllers\Laboran\LaboranManajemenRuanganController;
 use App\Http\Controllers\Laboran\LaboranPeminjamanSirkulasiController;
+use App\Http\Controllers\Laboran\LaboranPenyewaanPenelitianController;
 use App\Http\Controllers\Laboran\LaboranPerawatanAlatController;
+use App\Http\Controllers\Laboran\LaboranTagihanPenelitianController;
 use App\Http\Controllers\Laboran\LaboranTicketController;
 use App\Http\Controllers\Mahasiswa\MahasiswaAbsensiController;
 use App\Http\Controllers\Mahasiswa\MahasiswaBookingRuanganController;
@@ -40,8 +44,10 @@ use App\Http\Controllers\Mahasiswa\MahasiswaInventarisController;
 use App\Http\Controllers\Mahasiswa\MahasiswaJadwalLaboratoriumController;
 use App\Http\Controllers\Mahasiswa\MahasiswaPeminjamanController;
 use App\Http\Controllers\Mahasiswa\MahasiswaPeminjamanPengembalianController;
+use App\Http\Controllers\Mahasiswa\MahasiswaPenelitianController;
 use App\Http\Controllers\Mahasiswa\MahasiswaPengembalianController;
 use App\Http\Controllers\Mahasiswa\MahasiswaProfilController;
+use App\Http\Controllers\Mahasiswa\MahasiswaTagihanController;
 use App\Http\Controllers\Mahasiswa\MahasiswaTicketController;
 use App\Http\Controllers\NotifikasiController;
 use App\Http\Controllers\ProfileController;
@@ -89,6 +95,19 @@ Route::middleware(['auth', 'verified'])->prefix('mahasiswa')->name('mahasiswa.')
     Route::get('/peminjaman', [MahasiswaPeminjamanController::class, 'index'])->name('peminjaman.index');
     Route::post('/peminjaman', [MahasiswaPeminjamanController::class, 'store'])->name('peminjaman.store');
 
+    
+    // 8. Fitur Penyewaan Penelitian (Revisi)
+    Route::get('/penelitian', [MahasiswaPenelitianController::class, 'index'])->name('penelitian.index');
+    Route::post('/penelitian/surat', [MahasiswaPenelitianController::class, 'storeSurat'])->name('penelitian.surat.store');
+    
+    // Mahasiswa menyewa alat (lebih dari 1 alat) setelah surat disetujui
+    Route::post('/penelitian/{surat_id}/sewa-alat', [MahasiswaPenelitianController::class, 'storeSewa'])->name('penelitian.sewa.store');
+    
+    // Tagihan & Nota
+    Route::get('/tagihan', [MahasiswaTagihanController::class, 'index'])->name('tagihan.index');
+    Route::post('/tagihan/{id}/upload-bukti', [MahasiswaTagihanController::class, 'uploadBukti'])->name('tagihan.upload');
+    Route::get('/tagihan/{id}/cetak-nota', [MahasiswaTagihanController::class, 'cetakNota'])->name('tagihan.cetak-nota'); // Export PDF menggunakan dompdf
+
     // 3 Pengembalian
     // Route::get('/pengembalian', [MahasiswaPengembalianController::class, 'index'])->name('pengembalian.index');
     // Route::post('/pengembalian/{id}', [MahasiswaPengembalianController::class, 'store'])->name('pengembalian.store');
@@ -135,7 +154,9 @@ Route::middleware(['auth', 'verified'])->prefix('mahasiswa')->name('mahasiswa.')
     Route::post('/tickets', [MahasiswaTicketController::class, 'store'])->name('tickets.store');
     Route::post('/tickets/{id}/reply', [MahasiswaTicketController::class, 'reply'])->name('tickets.reply');
     Route::put('/tickets/{id}/close', [MahasiswaTicketController::class, 'close'])->name('tickets.close');    
-    });
+
+
+});
 
 Route::middleware(['auth', 'verified'])->prefix('dosen')->name('dosen.')->group(function () {
 
@@ -278,6 +299,15 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
     // Pengaturan Integrasi Telegram Bot
     Route::post('/tickets/telegram-config', [AdminTicketController::class, 'updateTelegramConfig'])->name('tickets.telegram-config');
 
+    // 6.Validasi Surat Penelitian (Form A, B, C) (REVISI)
+    Route::get('/penelitian', [AdminPenelitianController::class, 'index'])->name('penelitian.index');
+    Route::post('/penelitian/{id}/teruskan-laboran', [AdminPenelitianController::class, 'teruskanLaboran'])->name('penelitian.teruskan');
+    
+    // Validasi & Rilis Tagihan dari Laboran ke Mahasiswa
+    Route::get('/tagihan-penelitian', [AdminTagihanPenelitianController::class, 'index'])->name('tagihan.index');
+    Route::post('/tagihan-penelitian/{id}/rilis', [AdminTagihanPenelitianController::class, 'rilisTagihan'])->name('tagihan.rilis');
+    Route::post('/tagihan-penelitian/{id}/lunas', [AdminTagihanPenelitianController::class, 'verifikasiLunas'])->name('tagihan.lunas');
+
 });
 
 
@@ -301,6 +331,20 @@ Route::middleware(['auth', 'verified'])->prefix('laboran')->name('laboran.')->gr
     // Route bayar denda oleh laboran
     Route::post('/sirkulasi/{peminjaman}/bayar-denda', [LaboranPeminjamanSirkulasiController::class, 'bayarDenda'])
         ->name('sirkulasi.bayar-denda');
+
+    
+    // 8.Kelola Penyewaan Alat Penelitian (REVISI)
+    Route::get('/penyewaan-penelitian', [LaboranPenyewaanPenelitianController::class, 'index'])->name('penyewaan.index');
+    Route::post('/penyewaan-penelitian/{id}/approve', [LaboranPenyewaanPenelitianController::class, 'approve'])->name('penyewaan.approve');
+    
+    // Buat Tagihan ke Admin
+    Route::post('/penyewaan-penelitian/{id}/buat-tagihan', [LaboranPenyewaanPenelitianController::class, 'buatTagihan'])->name('penyewaan.tagihan');
+
+    // Rekap Nota Seluruh Tagihan Mahasiswa untuk Laboran
+    Route::get('/rekap-tagihan-penelitian', [LaboranTagihanPenelitianController::class, 'rekap'])->name('tagihan.rekap');
+    Route::get('/rekap-tagihan-penelitian/export', [LaboranTagihanPenelitianController::class, 'exportPdf'])->name('tagihan.export');
+
+    
 
     // 4. Jadwal Lab
     // Halaman Utama (Dua Tab: Booking & Jadwal)
@@ -362,6 +406,7 @@ Route::middleware(['auth', 'verified'])->prefix('laboran')->name('laboran.')->gr
     Route::put('/tickets/{id}/status', [LaboranTicketController::class, 'updateStatus'])->name('tickets.update-status');
     Route::post('/tickets/{id}/reply', [LaboranTicketController::class, 'reply'])->name('tickets.reply');
     Route::post('/tickets/{id}/maintenance', [LaboranTicketController::class, 'createMaintenance'])->name('tickets.maintenance');
+
 
 });
 

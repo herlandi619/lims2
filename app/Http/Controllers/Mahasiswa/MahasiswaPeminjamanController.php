@@ -18,7 +18,7 @@ class MahasiswaPeminjamanController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-
+ 
         // Query Peminjaman milik Mahasiswa yang login beserta detail & alat
         $query = Peminjaman::with(['details.alat', 'user'])
             ->where('user_id', $user->id);
