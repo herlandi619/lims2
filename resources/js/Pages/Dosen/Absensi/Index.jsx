@@ -15,6 +15,10 @@ export default function Index({ kelas, ruangan, filters }) {
     const [topikMateri, setTopikMateri] = useState('');
     const [tanggalPraktik, setTanggalPraktik] = useState('');
 
+    // Tambahkan 2 state Absensi
+    const [beritaAcara, setBeritaAcara] = useState('');
+    const [fileAbsenFisik, setFileAbsenFisik] = useState(null);
+
     // Form Tambah Kelas Praktikum
     const { data, setData, post, processing, errors, reset } = useForm({
         kode_kelas: '',
@@ -47,12 +51,15 @@ export default function Index({ kelas, ruangan, filters }) {
     };
 
     // Buka Sheet Absensi Pertemuan Spesifik
+    // Update fungsi openLembarAbsensi
     const openLembarAbsensi = (pertemuanId) => {
         axios.get(route('dosen.absensi.pertemuan.show', pertemuanId)).then((res) => {
             setSelectedPertemuan(res.data.pertemuan);
             setListAbsensi(res.data.list_absensi);
             setTopikMateri(res.data.pertemuan.topik_materi || '');
             setTanggalPraktik(res.data.pertemuan.tanggal_praktik || new Date().toISOString().split('T')[0]);
+            setBeritaAcara(res.data.pertemuan.berita_acara || ''); // Set data lama jika ada
+            setFileAbsenFisik(null); // Reset input file
         });
     };
 
@@ -69,17 +76,21 @@ export default function Index({ kelas, ruangan, filters }) {
         setListAbsensi(updated);
     };
 
-    // Simpan Lembar Absensi
+    // Update fungsi handleSimpanAbsensi (Tambahkan forceFormData)
     const handleSimpanAbsensi = (e) => {
         e.preventDefault();
         router.post(route('dosen.absensi.pertemuan.simpan', selectedPertemuan.id), {
             topik_materi: topikMateri,
             tanggal_praktik: tanggalPraktik,
-            absensi: listAbsensi
+            berita_acara: beritaAcara,
+            file_absen_fisik: fileAbsenFisik,
+            absensi: listAbsensi,
+            _method: 'POST' 
         }, {
+            forceFormData: true, // Wajib agar bisa kirim FIle Upload ke Laravel
             onSuccess: () => {
                 setSelectedPertemuan(null);
-                Swal.fire('Tersimpan!', 'Lembar absensi pertemuan berhasil diperbarui.', 'success');
+                Swal.fire('Tersimpan!', 'Absensi, Berita Acara, & File Fisik berhasil diperbarui.', 'success');
             }
         });
     };
@@ -304,24 +315,20 @@ export default function Index({ kelas, ruangan, filters }) {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div>
                                     <label className="block text-xs font-semibold mb-1">Tanggal Praktikum</label>
-                                    <input
-                                        type="date"
-                                        value={tanggalPraktik}
-                                        onChange={(e) => setTanggalPraktik(e.target.value)}
-                                        className="w-full px-3 py-1.5 border rounded-lg text-sm"
-                                        required
-                                    />
+                                    <input type="date" value={tanggalPraktik} onChange={(e) => setTanggalPraktik(e.target.value)} className="w-full px-3 py-1.5 border rounded-lg text-sm" required />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-semibold mb-1">Topik Praktikum</label>
-                                    <input
-                                        type="text"
-                                        value={topikMateri}
-                                        onChange={(e) => setTopikMateri(e.target.value)}
-                                        className="w-full px-3 py-1.5 border rounded-lg text-sm"
-                                        placeholder="Judul modul/topik..."
-                                        required
-                                    />
+                                    <input type="text" value={topikMateri} onChange={(e) => setTopikMateri(e.target.value)} className="w-full px-3 py-1.5 border rounded-lg text-sm" placeholder="Judul modul..." required />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-xs font-semibold mb-1">Berita Acara / Catatan Pertemuan</label>
+                                    <textarea value={beritaAcara} onChange={(e) => setBeritaAcara(e.target.value)} className="w-full px-3 py-1.5 border rounded-lg text-sm" placeholder="Isi berita acara kegiatan hari ini..." rows="2" required></textarea>
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-xs font-semibold mb-1">Upload Bukti Absen Fisik (Foto/PDF)</label>
+                                    <input type="file" onChange={(e) => setFileAbsenFisik(e.target.files[0])} className="w-full text-sm" accept=".pdf, image/*" required={!selectedPertemuan?.file_absen_fisik} />
+                                    {selectedPertemuan?.file_absen_fisik && <span className="text-[10px] text-emerald-600">✓ Sudah ada file yang terunggah sebelumnya.</span>}
                                 </div>
                             </div>
 

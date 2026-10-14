@@ -8,17 +8,19 @@ class PertemuanAbsensi extends Model
 {
     protected $table = 'pertemuan_absensi';
 
-    protected $fillable = [
-        'kelas_praktikum_id',
-        'pertemuan_ke',
-        'tanggal_praktik',
-        'jam_mulai',
-        'jam_selesai',
-        'topik_materi',
-        'catatan_dosen',
-        'status_pertemuan',
-        'qr_token'
-    ];
+    // protected $fillable = [
+    //     'kelas_praktikum_id',
+    //     'pertemuan_ke',
+    //     'tanggal_praktik',
+    //     'jam_mulai',
+    //     'jam_selesai',
+    //     'topik_materi',
+    //     'catatan_dosen',
+    //     'status_pertemuan',
+    //     'qr_token'
+    // ];
+
+    protected $guarded = [];
 
     public function kelasPraktikum()
     {

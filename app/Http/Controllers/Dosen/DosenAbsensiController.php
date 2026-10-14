@@ -133,28 +133,39 @@ class DosenAbsensiController extends Controller
         ]);
     }
 
-
-
-    // Simpan/Batch Update Absensi 14 Pertemuan
+    // Simpan/Batch Update Absensi, Berita Acara & Absen Fisik
     public function simpanAbsensi(Request $request, $id)
     {
         $pertemuan = PertemuanAbsensi::findOrFail($id);
 
+        // 1. Tambahkan validasi untuk berita_acara & file_absen_fisik
         $request->validate([
             'topik_materi' => 'required|string',
             'tanggal_praktik' => 'required|date',
+            'berita_acara' => 'required|string', // Wajib diisi
+            'file_absen_fisik' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048', // Bisa diupload dosen
             'absensi' => 'required|array',
             'absensi.*.mahasiswa_id' => 'required|exists:users,id',
             'absensi.*.status_kehadiran' => 'required|in:hadir,izin,sakit,alpa',
         ]);
 
         DB::transaction(function () use ($request, $pertemuan) {
-            $pertemuan->update([
+            
+            // 2. Gunakan 'berita_acara' (bukan catatan_dosen)
+            $dataUpdate = [
                 'topik_materi' => $request->topik_materi,
                 'tanggal_praktik' => $request->tanggal_praktik,
-                'catatan_dosen' => $request->catatan_dosen,
+                'berita_acara' => $request->berita_acara, 
                 'status_pertemuan' => 'selesai',
-            ]);
+            ];
+
+            // 3. Logika untuk menyimpan file gambar/PDF absensi fisik jika diunggah dosen
+            if ($request->hasFile('file_absen_fisik')) {
+                $dataUpdate['file_absen_fisik'] = $request->file('file_absen_fisik')->store('absensi_fisik', 'public');
+            }
+
+            // 4. Update tabel pertemuan
+            $pertemuan->update($dataUpdate);
 
             foreach ($request->absensi as $item) {
                 DetailAbsensi::updateOrCreate(
@@ -171,8 +182,9 @@ class DosenAbsensiController extends Controller
             }
         });
 
-        return redirect()->back()->with('success', "Lembar pertemuan ke-{$pertemuan->pertemuan_ke} berhasil disimpan.");
+        return redirect()->back()->with('success', "Lembar pertemuan ke-{$pertemuan->pertemuan_ke} beserta Berita Acara berhasil disimpan.");
     }
+
 
     public function generateQr($id)
     {

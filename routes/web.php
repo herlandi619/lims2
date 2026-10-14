@@ -186,7 +186,6 @@ Route::middleware(['auth', 'verified'])->prefix('dosen')->name('dosen.')->group(
     Route::post('/absensi/pertemuan/{id}/simpan', [DosenAbsensiController::class, 'simpanAbsensi'])->name('absensi.pertemuan.simpan');
     Route::post('/absensi/pertemuan/{id} /generate-qr', [DosenAbsensiController::class, 'generateQr'])->name('absensi.pertemuan.qr');
     Route::delete('/absensi/{id}', [DosenAbsensiController::class, 'destroy'])->name('absensi.destroy');
-
     // export pdf
     Route::get('/absensi/kelas/{id}/export-pdf', [DosenAbsensiController::class, 'exportPdf'])
     ->name('absensi.kelas.exportPdf');;
@@ -348,6 +347,9 @@ Route::middleware(['auth', 'verified'])->prefix('laboran')->name('laboran.')->gr
     Route::get('/absensi-monitoring', [LaboranAbsensiController::class, 'index'])->name('absensi.monitoring');
     Route::get('/absensi-monitoring/kelas/{id}', [LaboranAbsensiController::class, 'showKelas'])->name('absensi.monitoring.kelas');
     Route::get('/absensi-monitoring/pertemuan/{id}', [LaboranAbsensiController::class, 'showPertemuan'])->name('absensi.monitoring.pertemuan');
+
+    // Tambahan Revisi absensi
+    Route::get('/absensi-monitoring/rekap-berita-acara', [LaboranAbsensiController::class, 'exportBeritaAcara'])->name('absensi.monitoring.export-berita-acara');
 
     // 7. LAPORAN
     // Halaman Utama Laporan & Rekapitulasi (Read-Only 4 Tab)

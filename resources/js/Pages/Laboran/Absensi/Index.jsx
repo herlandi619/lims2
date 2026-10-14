@@ -71,6 +71,11 @@ export default function Index({ kelas, filters }) {
                     <button type="submit" className="px-4 py-2 bg-slate-800 text-white text-sm font-medium rounded-lg">
                         Cari
                     </button>
+
+                    {/* TOMBOL BARU: CETAK REKAP BERITA ACARA */}
+                    <a href={route('laboran.absensi.monitoring.export-berita-acara', { semester: semesterFilter })} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg flex items-center gap-2">
+                        📄 Cetak Rekap Berita Acara & Absen
+                    </a>
                 </form>
 
                 {/* Data Table */}
@@ -147,12 +152,24 @@ export default function Index({ kelas, filters }) {
             {selectedKelasMap && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
                     <div className="bg-white rounded-xl max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-center mb-4 border-b pb-3">
+                       <div className="flex justify-between items-start mb-4 border-b pb-3">
                             <div>
                                 <h3 className="text-lg font-bold text-slate-800">Detail Map Absensi: {selectedKelasMap.nama_praktikum}</h3>
                                 <p className="text-xs text-slate-500">Dosen Pengampu: {selectedKelasMap.dosen?.name || '-'}</p>
                             </div>
-                            <button onClick={() => setSelectedKelasMap(null)} className="text-slate-400 hover:text-slate-600">✕</button>
+                            
+                            {/* Area Tombol Kanan */}
+                            <div className="flex items-center gap-3">
+                                {/* Tombol Cetak Khusus Kelas Ini */}
+                                <a 
+                                    href={route('laboran.absensi.monitoring.export-berita-acara', { kelas_id: selectedKelasMap.id })} 
+                                    className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5"
+                                >
+                                    📄 Cetak Rekap Kelas Ini
+                                </a>
+                                
+                                <button onClick={() => setSelectedKelasMap(null)} className="text-slate-400 hover:text-slate-600 text-xl font-bold leading-none">✕</button>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -220,6 +237,19 @@ export default function Index({ kelas, filters }) {
                                 ) : (
                                     <p className="p-4 text-center text-xs text-slate-400">Belum ada data presensi mahasiswa yang diinput dosen.</p>
                                 )}
+                            </div>
+
+
+                            <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 p-3 rounded-lg border">
+                                <div><span className="text-slate-400 block mb-1">Berita Acara:</span> <strong className="text-slate-700 whitespace-pre-wrap">{selectedPertemuan.berita_acara || 'Belum diisi'}</strong></div>
+                                <div>
+                                    <span className="text-slate-400 block mb-1">Bukti Absen Fisik:</span> 
+                                    {selectedPertemuan.file_absen_fisik ? (
+                                        <a href={`/storage/${selectedPertemuan.file_absen_fisik}`} target="_blank" className="text-blue-600 font-bold hover:underline">Lihat Dokumen</a>
+                                    ) : (
+                                        <span className="text-slate-500 italic">Belum ada file</span>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="flex justify-end pt-3 border-t">

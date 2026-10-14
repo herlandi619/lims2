@@ -28,6 +28,9 @@ return new class extends Migration
                 ->default('terjadwal');
 
             $table->string('qr_token')->nullable()->unique(); // Untuk scan QR absensi mandiri
+            // tambahan revisi absensi
+            $table->text('berita_acara')->nullable();
+            $table->string('file_absen_fisik')->nullable();
             $table->timestamps();
         });
     }
